@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>S.H.I.T Journal - PDF Downloader</title>
+<meta name="description" content="快速浏览、搜索、一键下载 S.H.I.T Journal 全站论文 PDF">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📄</text></svg>">
+<style>
+  :root { --accent: #667eea; --accent-hover: #5a6fd6; --bg: #0a0a0a; --card: #151515; --card-hover: #1a1a1a; --border: #262626; --text: #e0e0e0; --muted: #777; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; -webkit-tap-highlight-color: transparent; }
+
+  /* Header */
+  .header { background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 20px 24px; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 100; }
+  .header-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .header h1 { font-size: 20px; color: #f0f0f0; }
+  .header p { font-size: 12px; color: #888; margin-top: 4px; }
+  .rate-info { font-size: 11px; color: #888; background: #1a1a1a; padding: 4px 10px; border-radius: 12px; border: 1px solid #333; white-space: nowrap; flex-shrink: 0; }
+  .rate-info strong { color: #f0c040; }
+  .controls { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
+  .search-box { flex: 1; min-width: 0; padding: 10px 14px; border: 1px solid #444; border-radius: 8px; background: #1a1a1a; color: var(--text); font-size: 16px; outline: none; transition: border-color 0.2s; -webkit-appearance: none; }
+  .search-box:focus { border-color: var(--accent); }
+  .zone-filter { display: flex; gap: 5px; flex-shrink: 0; }
+  .zone-btn { padding: 7px 12px; border: 1px solid #444; border-radius: 20px; background: transparent; color: #aaa; font-size: 12px; cursor: pointer; transition: all 0.2s; -webkit-tap-highlight-color: transparent; }
+  .zone-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+  /* Batch bar */
+  .batch-bar { display: flex; align-items: center; gap: 10px; padding: 10px 24px; background: #111; border-bottom: 1px solid #222; flex-wrap: wrap; }
+  .batch-bar label { font-size: 13px; color: #888; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  .batch-bar input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px; }
+  .btn { padding: 9px 16px; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-primary:disabled { background: #444; color: #777; cursor: not-allowed; }
+  .stats { margin-left: auto; font-size: 12px; color: #888; }
+
+  /* Notice */
+  .watermark-notice { background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 12px 16px; margin: 10px 24px 0; font-size: 11px; color: #888; line-height: 1.6; }
+  .watermark-notice strong { color: #f0c040; }
+  .watermark-notice a { color: var(--accent); }
+
+  /* List */
+  .list { padding: 12px 24px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 8px; display: flex; align-items: flex-start; gap: 12px; transition: all 0.2s; }
+  .card:hover { border-color: #444; background: var(--card-hover); }
+  .card input[type="checkbox"] { accent-color: var(--accent); flex-shrink: 0; width: 18px; height: 18px; margin-top: 2px; }
+  .card-body { flex: 1; min-width: 0; cursor: pointer; }
+  .card-title { font-size: 14px; font-weight: 600; color: #e8e8e8; margin-bottom: 6px; line-height: 1.4; word-break: break-word; }
+  .card-meta { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
+  .card-meta span { display: flex; align-items: center; gap: 3px; }
+  .zone-tag { padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 600; text-transform: uppercase; }
+  .zone-stone { background: #2d2a1a; color: #f0c040; }
+  .zone-septic { background: #1a2a1a; color: #50c050; }
+  .zone-latrine { background: #2a1a1a; color: #c05050; }
+  .card-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+  .preview-btn { padding: 8px 14px; background: transparent; color: var(--accent); border: 1px solid var(--accent); border-radius: 8px; font-size: 12px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+  .preview-btn:hover { background: rgba(102,126,234,0.1); }
+  .download-btn { padding: 8px 14px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+  .download-btn:hover { background: var(--accent-hover); }
+  .download-btn.downloading { background: #444; cursor: wait; pointer-events: none; }
+  .download-btn.done { background: #2d8a4e; }
+
+  /* Preview Modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9000; justify-content: center; align-items: center; padding: 16px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #1a1a1a; border-radius: 12px; width: 100%; max-width: 800px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #333; }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid #333; gap: 12px; }
+  .modal-title { font-size: 14px; font-weight: 600; color: #e8e8e8; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .modal-close { width: 32px; height: 32px; border-radius: 8px; border: none; background: #333; color: #ccc; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .modal-close:hover { background: #444; }
+  .modal-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; background: #111; }
+  .modal-body canvas { max-width: 100%; height: auto; border-radius: 4px; box-shadow: 0 2px 12px rgba(0,0,0,0.5); }
+  .modal-body .page-label { font-size: 11px; color: #666; }
+  .modal-footer { display: flex; gap: 10px; padding: 12px 18px; border-top: 1px solid #333; justify-content: space-between; align-items: center; }
+  .modal-footer .page-info { font-size: 12px; color: #888; }
+  .modal-nav { display: flex; gap: 8px; }
+  .modal-nav button { padding: 8px 16px; border-radius: 6px; border: 1px solid #444; background: #222; color: #ccc; font-size: 12px; cursor: pointer; }
+  .modal-nav button:hover { background: #333; }
+  .modal-nav button:disabled { opacity: 0.3; cursor: not-allowed; }
+  .modal-dl-btn { padding: 8px 18px; background: var(--accent); color: white; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; }
+  .modal-dl-btn:hover { background: var(--accent-hover); }
+  .modal-loading { padding: 60px; text-align: center; color: #666; }
+  .modal-loading .spinner { width: 36px; height: 36px; border: 3px solid #333; border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+
+  /* Overlays */
+  .progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: var(--accent); z-index: 9999; transition: width 0.3s; }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px); background: #2d8a4e; color: white; padding: 10px 18px; border-radius: 8px; font-size: 13px; z-index: 9999; opacity: 0; transition: all 0.3s; max-width: 90vw; text-align: center; }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  .loading { text-align: center; padding: 60px 20px; color: #666; }
+  .loading .spinner { width: 36px; height: 36px; border: 3px solid #333; border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .empty { text-align: center; padding: 60px 20px; color: #555; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 24px 16px; font-size: 11px; color: #444; border-top: 1px solid #1a1a1a; margin-top: 16px; line-height: 1.6; }
+  .footer a { color: #667eea; text-decoration: none; }
+
+  /* ====== Mobile ====== */
+  @media (max-width: 768px) {
+    .header { padding: 16px; }
+    .header h1 { font-size: 17px; }
+    .header-top { flex-wrap: wrap; }
+    .controls { gap: 8px; }
+    .search-box { min-width: 100%; }
+    .zone-filter { width: 100%; justify-content: space-between; }
+    .zone-btn { flex: 1; text-align: center; padding: 8px 6px; font-size: 11px; }
+    .batch-bar { padding: 10px 16px; }
+    .watermark-notice { margin: 8px 16px 0; padding: 10px 14px; font-size: 10px; }
+    .list { padding: 10px 16px; }
+    .card { padding: 12px; gap: 10px; flex-wrap: wrap; }
+    .card-body { width: 100%; order: 1; }
+    .card input[type="checkbox"] { order: 0; }
+    .card-actions { order: 2; flex-direction: row; width: 100%; }
+    .card-actions button { flex: 1; text-align: center; justify-content: center; display: flex; padding: 10px; }
+    .card-title { font-size: 14px; }
+    .card-meta { gap: 8px; font-size: 10px; }
+    .modal { max-height: 95vh; border-radius: 10px; }
+    .modal-header { padding: 12px 14px; }
+    .modal-body { padding: 12px; }
+    .modal-footer { padding: 10px 14px; flex-wrap: wrap; gap: 8px; }
+    .modal-nav { width: 100%; justify-content: space-between; }
+    .modal-dl-btn { width: 100%; text-align: center; padding: 12px; }
+    .stats { font-size: 11px; }
+    .footer { padding: 20px 16px; font-size: 10px; }
+  }
+  @media (max-width: 380px) {
+    .header h1 { font-size: 15px; }
+    .zone-btn { font-size: 10px; padding: 6px 4px; }
+    .card-title { font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar" style="width:0;display:none"></div>
+<div class="toast" id="toast"></div>
+
+<!-- Preview Modal -->
+<div class="modal-overlay" id="previewModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle"></div>
+      <button class="modal-close" onclick="closePreview()">&times;</button>
+    </div>
+    <div class="modal-body" id="modalBody">
+      <div class="modal-loading"><div class="spinner"></div>加载预览中...</div>
+    </div>
+    <div class="modal-footer">
+      <div class="page-info" id="pageInfo"></div>
+      <div class="modal-nav">
+        <button id="prevPage" onclick="gotoPage(-1)">上一页</button>
+        <button id="nextPage" onclick="gotoPage(1)">下一页</button>
+      </div>
+      <button class="modal-dl-btn" id="modalDlBtn">下载此论文</button>
+    </div>
+  </div>
+</div>
+
+<div class="header">
+  <div class="header-top">
+    <div>
+      <h1>S.H.I.T Journal PDF Downloader</h1>
+      <p>快速浏览、搜索、一键下载全站论文 PDF（自动添加免责水印）</p>
+    </div>
+    <div class="rate-info" id="rateInfo">
+      剩余: <strong id="remainCount">--</strong>/<strong>10</strong>
+    </div>
+  </div>
+  <div class="controls">
+    <input type="text" class="search-box" id="searchBox" placeholder="搜索论文标题或作者...">
+    <div class="zone-filter">
+      <button class="zone-btn active" data-zone="all">全部</button>
+      <button class="zone-btn" data-zone="stone">Stone</button>
+      <button class="zone-btn" data-zone="septic">Septic</button>
+      <button class="zone-btn" data-zone="latrine">Latrine</button>
+    </div>
+  </div>
+</div>
+
+<div class="batch-bar">
+  <label><input type="checkbox" id="selectAll"> 全选</label>
+  <button class="btn btn-primary" id="batchDownload" disabled>批量下载</button>
+  <div class="stats" id="statsText">加载中...</div>
+</div>
+
+<div class="watermark-notice">
+  <strong>免责声明：</strong>本工具仅供个人整活/学习参考，不构成任何商业用途、学术引用依据或观点背书。所有下载的 PDF 将自动添加 7 层防篡改水印（全页密集覆盖、嵌入内容流、不可轻易去除），并生成唯一下载 ID 用于追溯。请于下载后 24 小时内删除。每人每日限 10 次。<br>
+  <strong>本工具使用 Cloudflare 边缘缓存代理，每篇 PDF 仅从原站获取一次，后续所有请求均走缓存节点，不会对原站造成任何额外压力（无 DDoS 风险）。</strong><br>
+  <strong>如果您是原网页作者，需要下架或有任何疑问，请直接联系：<a href="mailto:turkeys-momenta.6u@icloud.com">turkeys-momenta.6u@icloud.com</a></strong>
+</div>
+
+<div class="list" id="paperList">
+  <div class="loading"><div class="spinner"></div>正在加载论文列表...</div>
+</div>
+
+<div class="footer">
+  S.H.I.T Journal PDF Downloader &mdash; 非官方工具，仅供个人整活<br>
+  <a href="https://shitjournal.org" target="_blank">原站</a> &mdash; 联系: <a href="mailto:turkeys-momenta.6u@icloud.com">turkeys-momenta.6u@icloud.com</a>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script>
+// pdf.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ============ CONFIG ============
+const PROXY_URL = '';  // <-- Fill in your Worker URL here after deployment
+const SUPABASE_URL = 'https://bcgdqepzakcufaadgnda.supabase.co';
+const API_KEY = 'sb_publishable_wHqWLjQwO2lMwkGLeBktng_Mk_xf5xd';
+const STORAGE_BUCKET = 'manuscripts';
+const DAILY_LIMIT = 10;
+const COOLDOWN_MS = 3000;
+
+// ============ RATE LIMITER ============
+const RateLimiter = {
+  _key: 'shit_dl_rate',
+  _getState() { try { const r = localStorage.getItem(this._key); return r ? JSON.parse(r) : null; } catch { return null; } },
+  _save(s) { try { localStorage.setItem(this._key, JSON.stringify(s)); } catch {} },
+  _today() { return new Date().toISOString().slice(0, 10); },
+  getRemaining() { const s = this._getState(); if (!s || s.date !== this._today()) return DAILY_LIMIT; return Math.max(0, DAILY_LIMIT - s.count); },
+  consume() {
+    const today = this._today(); let s = this._getState();
+    if (!s || s.date !== today) s = { date: today, count: 0, lastAt: 0 };
+    if (s.count >= DAILY_LIMIT) return { ok: false, reason: 'daily_limit' };
+    const now = Date.now();
+    if (now - s.lastAt < COOLDOWN_MS) return { ok: false, reason: 'cooldown', wait: COOLDOWN_MS - (now - s.lastAt) };
+    s.count++; s.lastAt = now; this._save(s);
+    return { ok: true, remaining: DAILY_LIMIT - s.count };
+  }
+};
+function updateRateDisplay() { document.getElementById('remainCount').textContent = RateLimiter.getRemaining(); }
+
+// ============ STATE ============
+let allPapers = [], filteredPapers = [], selectedIds = new Set();
+
+// ============ PDF URL HELPER ============
+function getPdfUrl(filePath) {
+  if (PROXY_URL) return { url: `${PROXY_URL}/api/pdf/${encodeURIComponent(filePath)}`, opts: {} };
+  return { url: `${SUPABASE_URL}/storage/v1/object/${STORAGE_BUCKET}/${filePath}`, opts: { headers: { 'apikey': API_KEY, 'Authorization': `Bearer ${API_KEY}` } } };
+}
+
+// ============ FETCH ============
+async function fetchPapers() {
+  try {
+    let res;
+    if (PROXY_URL) res = await fetch(`${PROXY_URL}/api/papers`);
+    else res = await fetch(`${SUPABASE_URL}/rest/v1/preprints_with_ratings_mat?select=id,manuscript_title,author_name,zone,file_path,file_size_bytes,created_at,avg_score,rating_count&order=created_at.desc&limit=500`, { headers: { 'apikey': API_KEY, 'Authorization': `Bearer ${API_KEY}` } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    allPapers = await res.json(); filteredPapers = [...allPapers];
+    updateStats(); renderList(); updateRateDisplay();
+  } catch (e) { document.getElementById('paperList').innerHTML = `<div class="empty">加载失败: ${e.message}<br>请检查网络连接后刷新</div>`; }
+}
+
+// ============ HELPERS ============
+function formatSize(b) { if (!b) return '?'; return b < 1048576 ? (b/1024).toFixed(0)+' KB' : (b/1048576).toFixed(1)+' MB'; }
+function formatDate(d) { return d ? new Date(d).toLocaleDateString('zh-CN') : ''; }
+function escapeHtml(s) { return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
+function updateStats() {
+  const t = filteredPapers.length, s = selectedIds.size;
+  document.getElementById('statsText').textContent = `共 ${allPapers.length} 篇 | 显示 ${t}${s > 0 ? ` | 选 ${s}` : ''}`;
+  document.getElementById('batchDownload').disabled = s === 0;
+  document.getElementById('batchDownload').textContent = s > 0 ? `批量下载 (${s})` : '批量下载';
+}
+
+// ============ RENDER ============
+function renderList() {
+  const c = document.getElementById('paperList');
+  if (!filteredPapers.length) { c.innerHTML = '<div class="empty">没有找到匹配的论文</div>'; return; }
+  c.innerHTML = filteredPapers.map(p => `
+    <div class="card" data-id="${p.id}">
+      <input type="checkbox" class="paper-check" data-id="${p.id}" ${selectedIds.has(p.id)?'checked':''}>
+      <div class="card-body" onclick="openPreview('${p.id}')">
+        <div class="card-title">${escapeHtml(p.manuscript_title)}</div>
+        <div class="card-meta">
+          <span>${escapeHtml(p.author_name||'匿名')}</span>
+          <span><span class="zone-tag zone-${p.zone}">${p.zone}</span></span>
+          <span>${formatDate(p.created_at)}</span>
+          <span>${formatSize(p.file_size_bytes)}</span>
+          ${p.avg_score?`<span>${Number(p.avg_score).toFixed(1)} (${p.rating_count})</span>`:''}
+        </div>
+      </div>
+      <div class="card-actions">
+        <button class="preview-btn" onclick="openPreview('${p.id}')">预览</button>
+        <button class="download-btn" onclick="downloadOne('${p.id}')" id="btn-${p.id}">下载</button>
+      </div>
+    </div>
+  `).join('');
+  c.querySelectorAll('.paper-check').forEach(cb => {
+    cb.addEventListener('change', e => { if (e.target.checked) selectedIds.add(e.target.dataset.id); else selectedIds.delete(e.target.dataset.id); updateStats(); });
+  });
+}
+
+// ============ PREVIEW ============
+let previewPdf = null, previewCurrentPage = 1, previewTotalPages = 0, previewPaperId = null;
+
+async function openPreview(id) {
+  const paper = allPapers.find(p => p.id === id);
+  if (!paper) return;
+  previewPaperId = id;
+  previewCurrentPage = 1;
+  document.getElementById('modalTitle').textContent = paper.manuscript_title;
+  document.getElementById('modalBody').innerHTML = '<div class="modal-loading"><div class="spinner"></div>加载预览中...</div>';
+  document.getElementById('previewModal').classList.add('open');
+  document.getElementById('modalDlBtn').onclick = () => { closePreview(); downloadOne(id); };
+  document.body.style.overflow = 'hidden';
+
+  try {
+    const { url, opts } = getPdfUrl(paper.file_path);
+    let pdfData;
+    if (opts.headers) {
+      const resp = await fetch(url, opts);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      pdfData = await resp.arrayBuffer();
+    } else {
+      pdfData = url;
+    }
+    previewPdf = await pdfjsLib.getDocument(typeof pdfData === 'string' ? pdfData : { data: pdfData }).promise;
+    previewTotalPages = previewPdf.numPages;
+    await renderPreviewPage(previewCurrentPage);
+  } catch (e) {
+    document.getElementById('modalBody').innerHTML = `<div class="empty">预览加载失败: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+async function renderPreviewPage(num) {
+  if (!previewPdf) return;
+  const page = await previewPdf.getPage(num);
+  const vw = Math.min(760, window.innerWidth - 64);
+  const viewport = page.getViewport({ scale: vw / page.getViewport({ scale: 1 }).width });
+  const canvas = document.createElement('canvas');
+  canvas.width = viewport.width; canvas.height = viewport.height;
+  const ctx = canvas.getContext('2d');
+  await page.render({ canvasContext: ctx, viewport }).promise;
+
+  const body = document.getElementById('modalBody');
+  body.innerHTML = '';
+  body.appendChild(canvas);
+
+  document.getElementById('pageInfo').textContent = `第 ${num} / ${previewTotalPages} 页`;
+  document.getElementById('prevPage').disabled = num <= 1;
+  document.getElementById('nextPage').disabled = num >= previewTotalPages;
+}
+
+function gotoPage(delta) {
+  const next = previewCurrentPage + delta;
+  if (next < 1 || next > previewTotalPages) return;
+  previewCurrentPage = next;
+  renderPreviewPage(previewCurrentPage);
+}
+
+function closePreview() {
+  document.getElementById('previewModal').classList.remove('open');
+  document.body.style.overflow = '';
+  if (previewPdf) { previewPdf.destroy(); previewPdf = null; }
+}
+
+// Close on overlay click or Escape
+document.getElementById('previewModal').addEventListener('click', e => { if (e.target === e.currentTarget) closePreview(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePreview(); });
+
+// Swipe support for mobile preview
+let touchStartX = 0;
+document.getElementById('modalBody').addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+document.getElementById('modalBody').addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if (Math.abs(dx) > 60) gotoPage(dx < 0 ? 1 : -1);
+}, { passive: true });
+
+// ============ WATERMARK + DOWNLOAD ============
+async function downloadPdf(paper) {
+  const check = RateLimiter.consume();
+  if (!check.ok) {
+    if (check.reason === 'daily_limit') throw new Error('今日下载次数已达上限 (10次)，请明天再来');
+    if (check.reason === 'cooldown') throw new Error(`请等待 ${Math.ceil(check.wait/1000)} 秒后再下载`);
+  }
+  updateRateDisplay();
+
+  const { PDFDocument, rgb, degrees, StandardFonts } = PDFLib;
+  const { url: pdfUrl, opts: fetchOpts } = getPdfUrl(paper.file_path);
+  const res = await fetch(pdfUrl, fetchOpts);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const pdfBytes = await res.arrayBuffer();
+
+  const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+  const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const pages = pdfDoc.getPages();
+  const now = new Date();
+  const downloadDate = now.toISOString().slice(0, 10);
+  const downloadTime = now.toISOString().slice(11, 19);
+  const CONTACT_EMAIL = 'turkeys-momenta.6u@icloud.com';
+  const ORIGINAL_URL = `https://shitjournal.org/preprints/${paper.id}`;
+  const ts = now.getTime().toString(36);
+  const rand = Math.random().toString(36).slice(2, 8);
+  const screenFP = ((screen.width * screen.height) ^ navigator.hardwareConcurrency).toString(36);
+  const UNIQUE_ID = `${ts}-${screenFP}-${rand}`.toUpperCase();
+
+  for (const page of pages) {
+    const { width, height } = page.getSize();
+    const pgNum = pages.indexOf(page) + 1;
+
+    // Layer 1: Dense primary tile
+    for (let y = -80; y < height + 150; y += 75) {
+      for (let x = -250; x < width + 250; x += 200) {
+        page.drawText('FOR PERSONAL STUDY ONLY', { x, y, size: 16, font: helveticaBold, color: rgb(0.7,0.7,0.7), rotate: degrees(35), opacity: 0.14 });
+      }
+    }
+    // Layer 2: Secondary tile
+    for (let y = -40; y < height + 150; y += 75) {
+      for (let x = -150; x < width + 250; x += 200) {
+        page.drawText('PERSONAL USE ONLY', { x: x+100, y: y+38, size: 13, font: helvetica, color: rgb(0.65,0.65,0.65), rotate: degrees(-28), opacity: 0.10 });
+      }
+    }
+    // Layer 3: URL tile
+    const tile3 = `shitjournal.org/preprints/${paper.id.slice(0,8)}`;
+    for (let y = -20; y < height + 100; y += 95) {
+      for (let x = -180; x < width + 200; x += 240) {
+        page.drawText(tile3, { x: x+50, y: y+20, size: 8, font: helvetica, color: rgb(0.78,0.78,0.78), rotate: degrees(42), opacity: 0.10 });
+      }
+    }
+    // Layer 4: Giant center cross
+    const bigSize = Math.min(42, width/14), medSize = Math.min(18, width/30);
+    const w1 = helveticaBold.widthOfTextAtSize('NOT FOR COMMERCIAL USE', bigSize);
+    page.drawText('NOT FOR COMMERCIAL USE', { x: width/2-w1/2*Math.cos(Math.PI/5.5), y: height/2-w1/2*Math.sin(Math.PI/5.5)-40, size: bigSize, font: helveticaBold, color: rgb(0.8,0.15,0.15), rotate: degrees(33), opacity: 0.12 });
+    const w2 = helveticaBold.widthOfTextAtSize('DELETE WITHIN 24 HOURS', bigSize);
+    page.drawText('DELETE WITHIN 24 HOURS', { x: width/2-w2/2*Math.cos(Math.PI/5.5), y: height/2+w2/2*Math.sin(Math.PI/5.5)+40, size: bigSize, font: helveticaBold, color: rgb(0.8,0.15,0.15), rotate: degrees(-33), opacity: 0.12 });
+    const wUrl = helvetica.widthOfTextAtSize(ORIGINAL_URL, medSize);
+    page.drawText(ORIGINAL_URL, { x: (width-wUrl)/2, y: height/2-5, size: medSize, font: helvetica, color: rgb(0.6,0.6,0.6), opacity: 0.12 });
+    // Layer 5: Unique ID scattered
+    const idText = `ID:${UNIQUE_ID}`;
+    for (const [ix,iy] of [[10,height-14],[width/2,height-14],[width-120,height-14],[10,height*.75],[width-120,height*.75],[10,height*.5],[width-120,height*.5],[10,height*.25],[width-120,height*.25],[10,58],[width/3,58],[width*2/3,58]]) {
+      page.drawText(idText, { x:ix, y:iy, size: 5.5, font: helvetica, color: rgb(0.82,0.82,0.82), opacity: 0.22 });
+    }
+    // Layer 6: Fingerprint 4 corners + center
+    const fp = `DL:${downloadDate}T${downloadTime} PG:${pgNum}/${pages.length} ID:${UNIQUE_ID}`;
+    const fpW = helvetica.widthOfTextAtSize(fp, 5), fpC = rgb(0.85,0.85,0.85);
+    page.drawText(fp, { x:8, y:height-10, size:5, font:helvetica, color:fpC, opacity:0.28 });
+    page.drawText(fp, { x:width-fpW-8, y:height-10, size:5, font:helvetica, color:fpC, opacity:0.28 });
+    page.drawText(fp, { x:8, y:60, size:5, font:helvetica, color:fpC, opacity:0.28 });
+    page.drawText(fp, { x:width-fpW-8, y:60, size:5, font:helvetica, color:fpC, opacity:0.28 });
+    page.drawText(fp, { x:(width-fpW)/2, y:height/2+20, size:5, font:helvetica, color:fpC, opacity:0.20 });
+    // Layer 7: Bottom banner
+    page.drawRectangle({ x:0, y:0, width, height:54, color:rgb(1,1,1), opacity:0.96 });
+    page.drawRectangle({ x:0, y:51.5, width, height:2.5, color:rgb(0.8,0.1,0.1), opacity:0.85 });
+    page.drawText('DISCLAIMER: For personal amusement/study only. Not for commercial use, citation, or endorsement. Delete within 24h.', { x:10, y:38, size:7, font:helveticaBold, color:rgb(0.3,0.05,0.05) });
+    page.drawText(`Original: ${ORIGINAL_URL} | Contact: ${CONTACT_EMAIL}`, { x:10, y:26, size:6.5, font:helvetica, color:rgb(0.3,0.3,0.3) });
+    page.drawText(`Download ID: ${UNIQUE_ID} | Date: ${downloadDate} ${downloadTime} | Page ${pgNum}/${pages.length} | Watermark baked into content stream`, { x:10, y:14, size:5.5, font:helvetica, color:rgb(0.45,0.45,0.45) });
+    page.drawText(`If you are the original author and need this removed, please contact: ${CONTACT_EMAIL}`, { x:10, y:4, size:5, font:helvetica, color:rgb(0.5,0.5,0.5) });
+  }
+
+  pdfDoc.setTitle(`${paper.manuscript_title} [WATERMARKED - ID:${UNIQUE_ID}]`);
+  pdfDoc.setSubject(`Watermarked copy. Original: ${ORIGINAL_URL} | ID: ${UNIQUE_ID} | Contact: ${CONTACT_EMAIL}`);
+  pdfDoc.setKeywords(['watermarked', 'personal-study-only', 'do-not-distribute', UNIQUE_ID]);
+  pdfDoc.setProducer('S.H.I.T Journal PDF Downloader');
+  pdfDoc.setCreator(`Watermark System v3 | ID:${UNIQUE_ID}`);
+
+  const watermarkedBytes = await pdfDoc.save({ useObjectStreams: false });
+  const blob = new Blob([watermarkedBytes], { type: 'application/pdf' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = `${paper.manuscript_title}.pdf`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+async function downloadOne(id) {
+  const paper = allPapers.find(p => p.id === id);
+  if (!paper) return;
+  const btn = document.getElementById(`btn-${id}`);
+  if (btn.classList.contains('downloading')) return;
+  btn.classList.add('downloading'); btn.textContent = '...';
+  try {
+    await downloadPdf(paper);
+    btn.classList.remove('downloading'); btn.classList.add('done'); btn.textContent = '已下载';
+  } catch (e) { btn.classList.remove('downloading'); btn.textContent = '下载'; showToast(e.message, true); }
+}
+
+async function batchDownloadSelected() {
+  const papers = allPapers.filter(p => selectedIds.has(p.id));
+  if (!papers.length) return;
+  const remaining = RateLimiter.getRemaining();
+  const toDownload = papers.slice(0, remaining);
+  if (!toDownload.length) { showToast('今日下载次数已达上限', true); return; }
+  if (toDownload.length < papers.length) showToast(`今日剩余 ${remaining} 次，将下载前 ${toDownload.length} 篇`, true);
+  const bar = document.getElementById('progressBar'); bar.style.display = 'block';
+  let done = 0, failed = 0;
+  for (const paper of toDownload) {
+    const btn = document.getElementById(`btn-${paper.id}`);
+    try {
+      if (btn) { btn.classList.add('downloading'); btn.textContent = '...'; }
+      await downloadPdf(paper);
+      if (btn) { btn.classList.remove('downloading'); btn.classList.add('done'); btn.textContent = '已下载'; }
+    } catch (e) { failed++; if (btn) { btn.classList.remove('downloading'); btn.textContent = '下载'; } if (e.message.includes('上限')) break; }
+    done++; bar.style.width = `${(done/toDownload.length)*100}%`;
+    await new Promise(r => setTimeout(r, COOLDOWN_MS));
+  }
+  showToast(`批量完成: ${done-failed}/${toDownload.length}`);
+  updateRateDisplay();
+  setTimeout(() => { bar.style.display = 'none'; bar.style.width = '0'; }, 1500);
+}
+
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.background = isError ? '#c0392b' : '#2d8a4e';
+  t.classList.add('show'); clearTimeout(t._tid);
+  t._tid = setTimeout(() => t.classList.remove('show'), 4000);
+}
+
+// ============ FILTERS ============
+document.getElementById('searchBox').addEventListener('input', applyFilters);
+document.querySelectorAll('.zone-btn').forEach(btn => {
+  btn.addEventListener('click', () => { document.querySelectorAll('.zone-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); applyFilters(); });
+});
+function applyFilters() {
+  const q = document.getElementById('searchBox').value.toLowerCase().trim();
+  const z = document.querySelector('.zone-btn.active').dataset.zone;
+  filteredPapers = allPapers.filter(p => {
+    if (z !== 'all' && p.zone !== z) return false;
+    if (q && !p.manuscript_title?.toLowerCase().includes(q) && !p.author_name?.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  updateStats(); renderList();
+}
+document.getElementById('selectAll').addEventListener('change', e => {
+  filteredPapers.forEach(p => { if (e.target.checked) selectedIds.add(p.id); else selectedIds.delete(p.id); });
+  updateStats(); renderList();
+});
+document.getElementById('batchDownload').addEventListener('click', batchDownloadSelected);
+
+// ============ INIT ============
+fetchPapers();
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+name = "shit-dl-proxy"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# Free plan is fine — 100k requests/day
+# Usage model defaults to "bundled" which is the free tier
